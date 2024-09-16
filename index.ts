@@ -161,7 +161,21 @@ async function runPm2Command(command: string, cwd: string, name: string) {
   });
 }
 
-async function processUpdate(repoName: string, branch: string, config: RepoConfig) {
+async function runPm2Restart(name: string) {
+  return new Promise<void>((resolve, reject) => {
+    const subProcess = Bun.spawn(['pm2', 'restart', name], {
+      cwd,
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+          resolve();
+        } else reject(new Error(`PM2 restart with code ${exitCode}`));
+      }
+    });
+  });
+}
+
+async function processUpdate(repoName: string, branch: string, config: RepoConfig, alreadyDeployed: boolean) {
   const [owner, repo] = repoName.split('/');
   const url = `https://api.github.com/repos/${owner}/${repo}/tarball/${branch}`;
   const repoPath = `${REPO_DIR}/${repoName}`;
@@ -199,8 +213,10 @@ async function processUpdate(repoName: string, branch: string, config: RepoConfi
   if (config.buildCommand?.length) {
     await runBuildCommand(config.buildCommand, repoPath);
   }
-  if (config.pm2Command?.length) {
+  if (config.pm2Command?.length && !alreadyDeployed) {
     await runPm2Command(config.pm2Command, repoPath, config.name);
+  } else if (alreadyDeployed) {
+    await runPm2Restart(config.name);
   }
 
   console.log(`Repository ${repoName} updated successfully.`);
@@ -219,7 +235,7 @@ async function handleAdminRequest(request: RepoConfig) {
   } else {
     await addWebhook(request.owner, request.name);
     // download the repo and run it.
-    await processUpdate(`${request.owner}/${request.name}`, request.branch, request);
+    await processUpdate(`${request.owner}/${request.name}`, request.branch, request, false);
     await addToCaddyConfig(request.caddyConfig);
   }
 }
@@ -252,7 +268,7 @@ const server = serve({
         return new Response("Repo/Branch not configured. Request ignored.", { status: 200 });
       }
       try {
-        await processUpdate(event.repository.full_name, branch, repoConfig);
+        await processUpdate(event.repository.full_name, branch, repoConfig, true);
         return new Response("Repository updated", { status: 200 });
       } catch (error) {
         console.error(`Error updating ${repoName}:`, error);
