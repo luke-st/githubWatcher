@@ -164,7 +164,33 @@ async function runPm2Command(command: string, cwd: string, name: string) {
 async function runPm2Restart(name: string) {
   return new Promise<void>((resolve, reject) => {
     const subProcess = Bun.spawn(['pm2', 'restart', name], {
-      cwd,
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+          resolve();
+        } else reject(new Error(`PM2 restart with code ${exitCode}`));
+      }
+    });
+  });
+}
+
+async function formatAndReloadCaddy() {
+  return new Promise<void>((resolve, reject) => {
+    const format = Bun.spawn(['caddy', 'fmt'], {
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+        } else reject(new Error(`PM2 restart with code ${exitCode}`));
+      }
+    });
+    const validate = Bun.spawn(['caddy', 'validate'], {
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+        } else reject(new Error(`PM2 restart with code ${exitCode}`));
+      }
+    });
+    const reload = Bun.spawn(['caddy', 'reload'], {
       onExit(proc, exitCode, signalCode, error) {
         if (exitCode === 0) {
           console.log(proc.stdout);
@@ -237,6 +263,7 @@ async function handleAdminRequest(request: RepoConfig) {
     // download the repo and run it.
     await processUpdate(`${request.owner}/${request.name}`, request.branch, request, false);
     await addToCaddyConfig(request.caddyConfig);
+    await formatAndReloadCaddy();
   }
 }
 
