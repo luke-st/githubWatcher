@@ -91,7 +91,7 @@ async function addWebhook(owner: string, name: string) {
 }
 
 async function addToCaddyConfig(config: string) {
-  await appendFile('Caddyfile', config);
+  await appendFile('~/Caddyfile', config);
   console.log('Caddyfile appended');
 }
 
@@ -147,9 +147,9 @@ async function runBuildCommand(command: string, cwd: string) {
   });
 }
 
-async function runPm2Command(command: string, cwd: string) {
+async function runPm2Command(command: string, cwd: string, name: string) {
   return new Promise<void>((resolve, reject) => {
-    const subProcess = Bun.spawn(['pm2', ...command.split(' ')], {
+    const subProcess = Bun.spawn(['pm2', ...command.split(' '), '--name', name], {
       cwd,
       onExit(proc, exitCode, signalCode, error) {
         if (exitCode === 0) {
@@ -196,8 +196,12 @@ async function processUpdate(repoName: string, branch: string, config: RepoConfi
   // Remove the tar file
   await rm(tarPath);
 
-  await runBuildCommand(config.buildCommand, repoPath);
-  await runPm2Command(config.pm2Command, repoPath);
+  if (config.buildCommand?.length) {
+    await runBuildCommand(config.buildCommand, repoPath);
+  }
+  if (config.pm2Command?.length) {
+    await runPm2Command(config.pm2Command, repoPath, config.name);
+  }
 
   console.log(`Repository ${repoName} updated successfully.`);
 }
