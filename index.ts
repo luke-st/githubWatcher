@@ -21,18 +21,27 @@ function getRepoConfig(name: string, branch: string) {
 function setRepoConfig(config: RepoConfig) {
   const query = db.query(`
     INSERT INTO repos
-    ("owner", "name", "branch", "buildCommand", "pm2Command", "caddyConfig") 
+    ("owner", "name", "branch", "buildCommand", "pm2Command", "caddyConfig", "needsInstall", "isBun") 
     VALUES 
-    ("${config.owner}", "${config.name}", "${config.branch}", "${config.buildCommand}", "${config.pm2Command}", "${config.caddyConfig.replaceAll('"','""')}");
+    (?, ?, ?, ?, ?, ?, ?, ?);
   `);
-  query.run();
+  query.run(
+    config.owner,
+    config.name,
+    config.branch,
+    config.buildCommand,
+    config.pm2Command,
+    config.caddyConfig,
+    config.needsInstall ? 1 : 0,
+    config.isBun ? 1 : 0
+  );
   console.log('Config saved');
 }
 
 function updateRepoConfig(config: RepoConfig) {
   const query = db.query(`
     UPDATE repos
-    SET buildCommand = ?, pm2Command = ?, caddyConfig = ?
+    SET buildCommand = ?, pm2Command = ?, caddyConfig = ?, needsInstall = ?, isBun = ?
     WHERE owner = ? AND name = ? AND branch = ?
   `);
   
@@ -40,6 +49,8 @@ function updateRepoConfig(config: RepoConfig) {
     config.buildCommand,
     config.pm2Command,
     config.caddyConfig,
+    config.needsInstall ? 1 : 0,
+    config.isBun ? 1 : 0,
     config.owner,
     config.name,
     config.branch
