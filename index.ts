@@ -102,7 +102,7 @@ async function addWebhook(owner: string, name: string) {
 }
 
 async function addToCaddyConfig(config: string) {
-  await appendFile('~/Caddyfile', config);
+  await appendFile(`${process.env.HOME}/Caddyfile`, config);
   console.log('Caddyfile appended');
 }
 
