@@ -5,6 +5,7 @@ interface RepoConfig {
     buildCommand: string;
     pm2Command: string;
     caddyConfig: string;
+    alreadyDeployed?: boolean;
 }
 
 interface WebhookRecord {

@@ -121,6 +121,7 @@ function verifySignature(payload: string, signature: string) {
 }
 
 async function extractTar(tarPath: string, destPath: string) {
+  console.log(`Extracting ${tarPath} to ${destPath}`);
   return new Promise<void>((resolve, reject) => {
     // tar -xzvf astro-blog.tar.gz -C astro-blog --strip-components 1
     const tar = Bun.spawn(['tar', '-xzf', tarPath, '-C', destPath, '--strip-components', '1'], {
@@ -233,16 +234,26 @@ async function processUpdate(repoName: string, branch: string, config: RepoConfi
   // Extract the tar archive to repo directory
   await extractTar(tarPath, repoPath);
 
+  console.log('Extracted.');
+
   // Remove the tar file
   await rm(tarPath);
 
+  console.log('Deleted tar archive.');
+
   if (config.buildCommand?.length) {
+    console.log('Running build command');
     await runBuildCommand(config.buildCommand, repoPath);
+    console.log('Build completed.');
   }
   if (config.pm2Command?.length && !alreadyDeployed) {
+    console.log('Running pm2 command');
     await runPm2Command(config.pm2Command, repoPath, config.name);
-  } else if (alreadyDeployed) {
+    console.log('pm2 command completed');
+  } else if (config.pm2Command?.length && alreadyDeployed) {
+    console.log('Already deployed in pm2. Restarting app');
     await runPm2Restart(config.name);
+    console.log('Restarted.');
   }
 
   console.log(`Repository ${repoName} updated successfully.`);
@@ -258,10 +269,11 @@ async function handleAdminRequest(request: RepoConfig) {
   }
   if (checkForExistingWebooks(request.name, request.owner)) {
     console.log('Repo already has an active webhook.');
+    await processUpdate(`${request.owner}/${request.name}`, request.branch, request, request.alreadyDeployed || false);
   } else {
     await addWebhook(request.owner, request.name);
     // download the repo and run it.
-    await processUpdate(`${request.owner}/${request.name}`, request.branch, request, false);
+    await processUpdate(`${request.owner}/${request.name}`, request.branch, request, request.alreadyDeployed || false);
     await addToCaddyConfig(request.caddyConfig);
     await formatAndReloadCaddy();
   }
