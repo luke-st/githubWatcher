@@ -244,7 +244,7 @@ async function formatAndReloadCaddy() {
 async function processUpdate(repoName: string, branch: string, config: RepoConfig, alreadyDeployed: boolean) {
   const [owner, repo] = repoName.split('/');
   const url = `https://api.github.com/repos/${owner}/${repo}/tarball/${branch}`;
-  const repoPath = `${REPO_DIR}/${repoName}`;
+  const repoPath = `${process.env.HOME}/${REPO_DIR}/${repoName}`;
   const tarPath = `${repoPath}.tar.gz`;
 
   console.log(`Downloading ${repoName}...`);
