@@ -160,6 +160,7 @@ async function runPm2Command(command: string, cwd: string, name: string) {
       }
     });
   });
+}
 
 async function runBunInstall(cwd: string) {
   return new Promise<void>((resolve, reject) => {
