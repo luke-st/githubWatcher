@@ -5,6 +5,8 @@ interface RepoConfig {
     buildCommand: string;
     pm2Command: string;
     caddyConfig: string;
+    needsInstall: 0 | 1;
+    isBun: 0 | 1;
     alreadyDeployed?: boolean;
 }
 

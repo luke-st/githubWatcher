@@ -160,6 +160,33 @@ async function runPm2Command(command: string, cwd: string, name: string) {
       }
     });
   });
+
+async function runBunInstall(cwd: string) {
+  return new Promise<void>((resolve, reject) => {
+    const subProcess = Bun.spawn(['bun', 'install'], {
+      cwd,
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+          resolve();
+        } else reject(new Error(`Bun install command failed with code ${exitCode}`));
+      }
+    });
+  });
+}
+
+async function runNpmInstall(cwd: string) {
+  return new Promise<void>((resolve, reject) => {
+    const subProcess = Bun.spawn(['npm', 'install'], {
+      cwd,
+      onExit(proc, exitCode, signalCode, error) {
+        if (exitCode === 0) {
+          console.log(proc.stdout);
+          resolve();
+        } else reject(new Error(`npm install command failed with code ${exitCode}`));
+      }
+    });
+  });
 }
 
 async function runPm2Restart(name: string) {
@@ -242,6 +269,20 @@ async function processUpdate(repoName: string, branch: string, config: RepoConfi
   console.log('Deleted tar archive.');
 
   if (config.buildCommand?.length) {
+    if (config.needsInstall) {
+      switch (config.isBun) {
+        case 0:
+          console.log('Running npm install');
+          await runNpmInstall(repoPath);
+          console.log('npm install complete.');
+          break;
+        case 1:
+          console.log('Running bun install');
+          await runBunInstall(repoPath);
+          console.log('bun install complete.');
+          break;
+      }
+    }
     console.log('Running build command');
     await runBuildCommand(config.buildCommand, repoPath);
     console.log('Build completed.');
